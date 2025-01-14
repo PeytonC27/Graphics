@@ -1,0 +1,7 @@
+*.o
+*.exe
+*.dll
+*.png
+/SDL2
+/build
+/.vscode
