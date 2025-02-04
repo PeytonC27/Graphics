@@ -1,9 +1,11 @@
 #include "cube.h"
 
 Cube::Cube() : Shape(Vector3(0,0,0), Vector3(10,10,10)) {
+    updatePoints();
 }
 
 Cube::Cube(Vector3 position, Vector3 scale) : Shape(position, scale) {
+    updatePoints();
 }
 
 void Cube::translate(Vector3 newPosition) {
@@ -25,13 +27,13 @@ void Cube::changeScale(Vector3 newScale) {
 }
 
 void Cube::draw(Framework& fw) {
-
+    
     // drawing vertices
     for (auto& p : points)
-        fw.drawPixel(*p);
+        fw.drawPixel(*p, this->color);
 
     for (auto& c : connections)
-        fw.drawLine(*c->point1, *c->point2);
+        fw.drawLine(*c->point1, *c->point2, this->color);
 }
 
 void Cube::updatePoints() {

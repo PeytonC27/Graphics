@@ -2,6 +2,8 @@
 
 #include "SDL2/SDL.h"
 #include "vector3.h"
+#include "color.h"
+
 #include <vector>
 #include <unordered_map>
 #include <tuple>
@@ -14,9 +16,9 @@ struct HashFunction {
     }
 };
 
-struct Frame {
-    std::unordered_map<std::pair<float, float>, Vector3, HashFunction> points;
-    int lifespan = 0;
+struct PixelData {
+    Vector3 position;
+    Color color = Color(255, 255, 255, 255);
 };
 
 class Framework {
@@ -26,22 +28,18 @@ public:
     Framework(int height, int width);
     ~Framework();
 
-    void drawPixel(Vector3 coordinate);
-    void drawLine(Vector3 start, Vector3 end);
+    void drawPixel(Vector3 coordinate, Color color);
+    void drawLine(Vector3 start, Vector3 end, Color color);
 	
     int saveImage();
     void clear();
     void render(float zFadeLimit, bool flipY = false);
-    void renderFrame(Frame frame, float zFadeLimit, bool flipY = false);
-    void renderDelayedFrames(std::list<Frame> frames, float zFadeLimit, bool flipY = false);
-
-    Frame captureFrame();
 
 private:
     int height;
     int width;
 
-    std::unordered_map<std::pair<float, float>, Vector3, HashFunction> points;
+    std::unordered_map<std::pair<float, float>, PixelData, HashFunction> points;
 
     SDL_Window* window = NULL; 
 };

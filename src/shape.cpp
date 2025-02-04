@@ -89,3 +89,8 @@ void Shape::rotate(Vector3 rotationAmt) {
         point->z += centroid.z;
     }
 }
+
+
+void Shape::setColor(Color color) {
+    this->color = color;
+}

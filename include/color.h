@@ -1,8 +1,6 @@
 #pragma once
 
 class Color {
-private:
-	
 public:
 	
 	int red;
@@ -14,4 +12,6 @@ public:
 	Color(int red, int green, int blue, int alpha);
 	
 	void increaseBrightness();
+private:
+	
 };

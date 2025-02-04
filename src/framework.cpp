@@ -1,5 +1,7 @@
 #include "framework.h"
 #include "SDL2/SDL_image.h"
+#include "color.h"
+
 #include <cmath>
 
 struct RGB {
@@ -28,19 +30,19 @@ Framework::~Framework() {
     SDL_Quit();
 }
 
-void Framework::drawPixel(Vector3 coordinate) {
+void Framework::drawPixel(Vector3 coordinate, Color color) {
 
 	auto key = std::make_pair(coordinate.x, coordinate.y);
 	
 	auto it = points.find(key);
 	if (it != points.end())
-		if (it->second.z >= coordinate.z) return;
+		if (it->second.position.z >= coordinate.z) return;
 
-	points[key] = coordinate;
+	points[key] = PixelData {coordinate, color};
 }
 
 
-void Framework::drawLine(Vector3 start, Vector3 end) {
+void Framework::drawLine(Vector3 start, Vector3 end, Color color) {
     Vector3 difference = end - start;
 
     Vector3 direction = difference.normalized();
@@ -51,7 +53,7 @@ void Framework::drawLine(Vector3 start, Vector3 end) {
 
     for (float i = 0; i < distance; i++) {
         drawPixel(
-            Vector3(std::round(x), std::round(y), std::round(z))
+            Vector3(std::round(x), std::round(y), std::round(z)), color
         );
         x += increment.x;
         y += increment.y;
@@ -68,15 +70,15 @@ void Framework::clear() {
 }
 
 void Framework::render(float zFadeLimit, bool flipY) {
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
 	for (auto& p : points) {
-		Vector3 point = p.second;
+		Vector3 point = p.second.position;
+        Color color = p.second.color;
 
-		float alpha = point.z < 0 ? std::max((zFadeLimit + point.z) / zFadeLimit * 255, 0.0f) : 255; 
+		float alpha = point.z < 0 ? std::max((zFadeLimit + point.z) / zFadeLimit * color.alpha, 0.0f) : color.alpha; 
         float y = flipY ? -(point.y - height) : point.y;
 
-		SDL_SetRenderDrawColor(renderer, 255, 255, 255, alpha);
+		SDL_SetRenderDrawColor(renderer, color.red, color.green, color.blue, alpha);
 		SDL_RenderDrawPointF(renderer, point.x, y);
 		//std::cout << point << std::endl;
 	}
@@ -88,48 +90,6 @@ void Framework::render(float zFadeLimit, bool flipY) {
     SDL_RenderPresent(renderer);                    // reflects changes done in window
 }
 
-void Framework::renderFrame(Frame frame, float zFadeLimit, bool flipY) {
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-
-	for (auto& p : frame.points) {
-		Vector3 point = p.second;
-
-		//float alpha = point.z < 0 ? std::max((zFadeLimit + point.z) / zFadeLimit * 255, 0.0f) : 255; 
-        float alpha = 255;
-        float y = flipY ? -(point.y - height) : point.y;
-
-		SDL_SetRenderDrawColor(renderer, 255, 255, 255, alpha);
-		SDL_RenderDrawPointF(renderer, point.x, y);
-		//std::cout << point << std::endl;
-	}
-	
-    SDL_RenderPresent(renderer);                    // reflects changes done in window
-}
-
-void Framework::renderDelayedFrames(std::list<Frame> frames, float zFadeLimit, bool flipY) {
-    float alpha = 255;
-    float dAlpha = 255 / frames.size();
-    for (auto& frame : frames) {
-
-        for (auto& p : frame.points) {
-		    Vector3 point = p.second;
-
-		    float tempAlpha = point.z < 0 ? std::max((zFadeLimit + point.z) / zFadeLimit * alpha, 0.0f) : alpha; 
-            float y = flipY ? -(point.y - height) : point.y;
-
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, tempAlpha); 
-		    SDL_RenderDrawPointF(renderer, point.x, y);
-		    //std::cout << point << std::endl;
-	    }
-
-        alpha -= dAlpha;
-    }
-    SDL_RenderPresent(renderer);
-}
-
-Frame Framework::captureFrame() {
-    return Frame {this->points, 0};
-}
 
 int Framework::saveImage() {// Create an SDL_Surface to store the renderer's pixel data
     SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(

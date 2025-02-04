@@ -1,8 +1,10 @@
 #pragma once
 
 #include "vector3.h"
-#include <vector>
 #include "framework.h"
+#include "color.h"
+
+#include <vector>
 #include <cmath>
 
 struct Connection {
@@ -22,6 +24,10 @@ public:
     /// @brief Rotaes the shape (adds to its current rotation)
     /// @param rotation the amount to rotate
     void rotate(Vector3 rotationAmt);
+
+    /// @brief Sets the color of this object
+    /// @param color 
+    void setColor(Color color);
 
     /// @brief Draws the shape
     /// @param fw the framework to draw with
@@ -44,6 +50,7 @@ public:
     std::vector<Connection*> connections;
     Vector3 scale;
     Vector3 rotation;
+    Color color = Color(255, 255, 255, 255);
 protected:
     Vector3 rotationIdentity;
 };
