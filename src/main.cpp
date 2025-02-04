@@ -1,10 +1,12 @@
-#include "vector2.h"
+#include "vector3.h"
 #include "framework.h"
 #include "color.h"
 #include "gradient.h"
-#include "circle.h"
-#include <graph.h>
 #include "SDL2/SDL.h"
+#include "cube.h"
+#include "compound_shape.h"
+#include "rammble_parser.h"
+
 #include <iostream>
 #include <cmath>
 #include <list>
@@ -12,397 +14,71 @@
 #include <set>
 #include <ctime>
 #include <algorithm>
+#include <functional>
+#include <sstream>
+#include <fstream>
 
-float trueRandom(int v) {
-	int max = v * ((RAND_MAX + 1u) / v);
-	int value = std::rand();
-	while (value >= max)
-		value = std::rand();
-	return value % v;
+using DisplayFunction = std::function<void()>;
+
+std::string trim(const std::string& str) {
+    size_t first = str.find_first_not_of(" \t\n\r");
+    if (first == std::string::npos) return "";  // String is all whitespace
+
+    size_t last = str.find_last_not_of(" \t\n\r");
+    return str.substr(first, last - first + 1);
 }
 
-void draw_slime(Framework& fw, int iterations, int width, int height) {
-    std::list<Vector2> points;
+std::vector<std::string> split(const std::string& str, char delimiter) {
+    std::vector<std::string> tokens;
 
-    Vector2 origin(width/2, height/2);
-    points.push_back(origin);
-
-    std::set<Vector2> existing;
-
-    std::srand(std::time(nullptr));
-	
-	Gradient grad = Gradient(Color(255, 0, 0), Color(0, 255, 0));
-
-    for (int i = 1; i <= iterations && points.size() > 0; i++) {
-        Vector2 current = points.front();
-        points.pop_front();
-
-        if (current.x < 0 || current.x > width)
-            continue;
-        if (current.y < 0 || current.y > height)
-            continue;
-
-        existing.insert(current);
-		
-		float ratio = current.x / width;
-
-
-        if (std::rand() % 2 == 0 && !existing.count(current + Vector2::up * 10)) {
-            fw.drawLine(current, current + Vector2::up, grad.at(ratio));
-            points.push_back(current + Vector2::up * 10);
+    std::string sbuffer;
+    for (char c : str) {
+        if (c == delimiter) {
+            tokens.push_back(trim(sbuffer));
+            sbuffer.clear();
         }
-        if (std::rand() % 2 == 0 && !existing.count(current + Vector2::down * 10)) {
-            fw.drawLine(current, current + Vector2::down * 10, grad.at(ratio));
-            points.push_back(current + Vector2::down * 10);
+        else {
+            sbuffer.push_back(c);
         }
-        if (std::rand() % 2 == 0 && !existing.count(current + Vector2::left * 10)) {
-            fw.drawLine(current, current + Vector2::left * 10, grad.at(ratio));
-            points.push_back(current + Vector2::left * 10);
-        }
-        if (std::rand() % 2 == 0 && !existing.count(current + Vector2::right * 10)) {
-            fw.drawLine(current, current + Vector2::right * 10, grad.at(ratio));
-            points.push_back(current + Vector2::right * 10);
-        }
-    }
+    }  
+
+    return tokens;
 }
 
-void draw_coral(Framework& fw, int iterations, int width, int height) {
+std::vector<Shape*> parseDisplayCode(const std::string& code) {
+    std::unordered_map<std::string, Shape*> shapes;
 
-    struct CoralPoint {
-        Vector2 point;
-        float angle;
-        int it;
-    };
-
-    float pi = 3.1415926535f;
-
-    std::list<CoralPoint> points;
-
-    Vector2 origin(0, 0);
-    points.push_back(CoralPoint { origin, -90 }); // -90
-
-    std::set<Vector2> existing;
-
-    std::srand(std::time(nullptr));
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
-    int coralLeafLen = 300;
-
-    for (int i = 1; i <= iterations && points.size() > 0; i++) {
-        if (points.size() == 0)
-            break;
-
-        CoralPoint current = points.front();
-        points.pop_front();
-
-        if (current.point.x < 0 || current.point.x > width)
-            continue;
-        if (current.point.y < 0 || current.point.y > height)
-            continue;
-        if (current.angle > 990)
-            continue;
-
-        existing.insert(current.point);
-
-        int newConnections = std::rand() % 4; // 0, 1, 2, or 3
-
-
-        for (int j = 0; j < newConnections; j++) {
-            float newAngle = current.angle + (std::rand() % 15);
-			coralLeafLen = std::rand() % 400 + 100;
-
-            Vector2 destinationVector = Vector2(std::roundf(current.point.x + coralLeafLen * std::cos(newAngle * pi / 180)),
-                                                std::roundf(current.point.y - coralLeafLen * std::sin(newAngle * pi / 180)));
-
-            Vector2 adjustedDest = Vector2(destinationVector.x - (int)destinationVector.x % 5,
-                                           destinationVector.y - (int)destinationVector.y % 5);
-
-
-            if (existing.count(adjustedDest))
-                continue;
-
-            fw.drawLine(current.point, destinationVector, Color(255, 255, 255, 255));
-            points.push_back(CoralPoint { destinationVector, newAngle } );
-            existing.insert(adjustedDest);
-        }
-    }
+    std::vector<std::string> lines = split(code, ';');
+    
+    return interpretRammbleCode(lines);
 }
 
-void draw_black_hole(Framework& fw, int iterations, int width, int height) {
-	struct HorizonPoint {
-        Vector2 point;
-        float angle;
-    };
+// taken from https://dev.devbf.com/posts/how-to-read-a-whole-file-into-a-stdstring-in-c-c94d9/
+std::string readFile(const std::string& filename) {
+    std::ifstream file(filename);
+    std::string contents;
 
-    float pi = 3.1415926535f;
-
-    std::list<HorizonPoint> points;
-
-    Vector2 origin(width/2, height/2 + 1000);
-	Vector2 center(width/2, height/2);
-	float innerRadius = 750;
-	float outerRadius = 1000;
-	
-    points.push_back(HorizonPoint { origin, 0 }); // -90
-
-    std::set<Vector2> existing;
-
-    std::srand(std::time(nullptr));
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
-    int horizonLineLen = 300;
-	
-	auto gradient = Gradient(Color(0, 0, 255), Color(255, 127, 127));
-
-    for (int i = 1; i <= iterations && points.size() > 0; i++) {
-        if (points.size() == 0)
-            break;
-
-        HorizonPoint current = points.front();
-        points.pop_front();
-
-        if (current.point.x < 0 || current.point.x > width)
-            continue;
-        if (current.point.y < 0 || current.point.y > height)
-            continue;
-        if (current.angle > 990)
-            continue;
-
-        existing.insert(current.point);
-
-        int newConnections = std::rand() % 4; // 0, 1, 2, or 3
-
-
-        for (int j = 0; j < newConnections; j++) {
-            float newAngle = current.angle + (std::rand() % 30);
-			horizonLineLen = std::rand() % 400 + 100;
-
-            Vector2 destinationVector = Vector2(std::roundf(current.point.x + horizonLineLen * std::cos(newAngle * pi / 180)),
-                                                std::roundf(current.point.y - horizonLineLen * std::sin(newAngle * pi / 180)));
-												
-			// if this new point is in the black circle, stop
-			if ((std::pow(center.y - destinationVector.y, 2) + std::pow(center.x - destinationVector.x, 2)) <= std::pow(innerRadius, 2))
-				continue;
-			
-			// if the new point is outside the expected range, there's a chance it'll break
-			if ((std::pow(center.y - destinationVector.y, 2) + std::pow(center.x - destinationVector.x, 2)) >= std::pow(outerRadius, 2)) {
-				float dist = (destinationVector - center).magnitude();
-				float oddsToStop = 1 - (outerRadius / dist);
-				//std::cout << oddsToStop << std::endl;
-				if (((double) std::rand() / (RAND_MAX)) < oddsToStop)
-					continue;
-			}
-
-            Vector2 adjustedDest = Vector2(destinationVector.x - (int)destinationVector.x % 5,
-                                           destinationVector.y - (int)destinationVector.y % 5);
-
-
-            if (existing.count(adjustedDest))
-                continue;
-
-			float distFromCenterRatio = std::pow(innerRadius / (destinationVector - center).magnitude(), 2);
-			Color color = gradient.at(distFromCenterRatio);
-
-            fw.drawLine(current.point, destinationVector, color);
-            points.push_back(HorizonPoint { destinationVector, newAngle } );
-            existing.insert(adjustedDest);
-        }
+    // Check if the file was opened successfully
+    if (!file.is_open()) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return "";
     }
-}
 
-void draw_plant(Framework& fw, int iterations, int width, int height) {
-	struct HorizonPoint {
-        Vector2 point;
-        float angle;
-    };
+    // Get the file's size
+    file.seekg(0, std::ios::end);
+    std::streampos fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
 
-    float pi = 3.1415926535f;
+    // Reserve memory for the string to avoid multiple reallocations
+    contents.reserve(fileSize);
 
-    std::list<HorizonPoint> points;
+    // Read the file's contents into the string
+    contents.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
 
-    Vector2 origin(width/2, 0);
-	
-    points.push_back(HorizonPoint { origin, 90 }); // -90
+    // Close the file
+    file.close();
 
-    std::set<Vector2> existing;
-
-    std::srand(std::time(nullptr));
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
-    int horizonLineLen;
-	int horizontalPlantRange = 1000;
-	
-	auto gradient = Gradient(Color(255, 255, 255), Color(255, 127, 127));
-	
-	std::uniform_real_distribution<float> angleDist(-15.0f, 15.0f);
-	std::uniform_real_distribution<float> rotationAngleOdds(0, 1);
-	float averageAngleOffset = 0;
-	
-	
-	int left = 0, right = 0, inc = 0, bads = 0;
-
-    for (int i = 1; i <= iterations && points.size() > 0; i++) {
-        if (points.size() == 0)
-            break;
-
-        HorizonPoint current = points.front();
-        points.pop_front();
-
-        if (current.point.x < 0 || current.point.x > width)
-            continue;
-        if (current.point.y < 0 || current.point.y > height)
-            continue;
-
-        existing.insert(current.point);
-
-        int newConnections = 2; // 0, 1, 2, or 3
-
-
-        for (int j = 0; j < newConnections; j++) {
-			float offset = angleDist(gen);
-			
-            float newAngle = current.angle + offset;
-			horizonLineLen = trueRandom(400) + 100;
-			
-								
-			if (current.angle > 90)
-				left++;
-			else
-				right++;
-		
-			if (newAngle > 210 || newAngle < -30) {
-				continue;
-			}
-				
-			
-			if (newAngle < -45)
-				bads++;
-			else if (newAngle > 225)
-				bads--;
-		
-            Vector2 destinationVector = Vector2(std::roundf(current.point.x + horizonLineLen * std::cos(newAngle * pi / 180)),
-                                                std::roundf(current.point.y + horizonLineLen * std::sin(newAngle * pi / 180)));
-
-
-            Vector2 adjustedDest = Vector2(destinationVector.x - (int)destinationVector.x % 5,
-                                           destinationVector.y - (int)destinationVector.y % 5);
-
-
-            if (existing.count(adjustedDest))
-                continue;
-			
-			inc++;
-			averageAngleOffset += current.angle;
-
-			float heightRatio = destinationVector.y / height;
-			Color color = gradient.at(heightRatio);
-
-            fw.drawLine(current.point, destinationVector, color);
-            points.push_back(HorizonPoint { destinationVector, newAngle } );
-            existing.insert(adjustedDest);
-        }
-    }
-	
-	std::cout << left << ", " << right << ", " << (averageAngleOffset/inc) << std::endl;
-	std::cout << bads << std::endl;
-}
-
-void run_test(int iterations, int width, int height) {
-	struct HorizonPoint {
-        Vector2 point;
-        float angle;
-    };
-
-    float pi = 3.1415926535f;
-
-    std::list<HorizonPoint> points;
-
-    Vector2 origin(width/2, 0);
-	
-    points.push_back(HorizonPoint { origin, 90 }); // -90
-
-    std::set<Vector2> existing;
-
-    std::srand(std::time(nullptr));
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
-    int horizonLineLen;
-	
-	std::uniform_real_distribution<float> angleDist(-15.0f, 15.0f);
-	std::uniform_real_distribution<float> rotationAngleOdds(0, 1);
-	float averageAngleOffset = 0;
-	
-	
-	int left = 0, right = 0, inc = 0, bads = 0;
-
-    for (int i = 1; i <= iterations && points.size() > 0; i++) {
-        if (points.size() == 0)
-            break;
-
-        HorizonPoint current = points.front();
-        points.pop_front();
-
-        if (current.point.x < 0 || current.point.x > width)
-            continue;
-        if (current.point.y < 0 || current.point.y > height)
-            continue;
-
-        existing.insert(current.point);
-
-        int newConnections = 2; // 0, 1, 2, or 3
-
-
-        for (int j = 0; j < newConnections; j++) {
-			float offset = angleDist(gen);
-			
-            float newAngle = current.angle + offset;
-			horizonLineLen = trueRandom(60) + 40;
-			
-								
-			if (current.angle > 90)
-				left++;
-			else
-				right++;
-		
-			if (newAngle > 225 || newAngle < -45) {
-				continue;
-			}
-				
-			
-			if (newAngle < -45)
-				bads++;
-			else if (newAngle > 225)
-				bads--;
-		
-            Vector2 destinationVector = Vector2(std::roundf(current.point.x + horizonLineLen * std::cos(newAngle * pi / 180)),
-                                                std::roundf(current.point.y + horizonLineLen * std::sin(newAngle * pi / 180)));
-
-
-            Vector2 adjustedDest = Vector2(destinationVector.x - (int)destinationVector.x % 5,
-                                           destinationVector.y - (int)destinationVector.y % 5);
-
-
-            if (existing.count(adjustedDest))
-                continue;
-			
-			inc++;
-			averageAngleOffset += current.angle;
-
-			//float heightRatio = destinationVector.y / height;
-			//RGBA color = gradient.at(heightRatio);
-
-            //fw.drawLine(current.point, destinationVector, color);
-            points.push_back(HorizonPoint { destinationVector, newAngle } );
-            existing.insert(adjustedDest);
-        }
-    }
-	
-	std::cout << left << ", " << right << ", " << (averageAngleOffset/inc) << std::endl;
-	std::cout << bads << std::endl;
+    return contents;
 }
 
 
@@ -411,34 +87,67 @@ int main(int argc, char* argv[]) {
     double msPerFrame = (1000.0/fps);
     //double delta = 1.0/fps;
 
-    int height = 400;
-    int width = 800;
+    int height = 500;
+    int width = 500;
 	
-	float pi = 3.1415926535f;
 
-    
-    //SDL_Event event;
-    //const Uint8* state = SDL_GetKeyboardState(nullptr);
-	
-	Graph graph;
-
-    graph.addFunction([](float x){ return std::powf(2, x) - 1; },   Color(255, 0, 0));
-    graph.addFunction([](float x){ return std::powf(x, 2); },   Color(255, 255, 0));
-    graph.addFunction([](float x){ return (x+1) * std::log2f(x + 1); }, Color(0, 255, 0));
-    graph.addFunction([](float x){ return x; },                 Color(0, 255, 255));
-    graph.addFunction([](float x){ return std::log2f(x+1); },     Color(0, 0, 255));
-    graph.addFunction([](float x){ return 0; },                 Color(255, 0, 255));
-
-    graph.setYRange(0, 10);
-    graph.setXRange(0, 10);
-
-    graph.display();
-
-	
+    Framework fw(height, width);
 	SDL_Event event;
-    const Uint8* state = SDL_GetKeyboardState(nullptr);;
+    //const Uint8* state = SDL_GetKeyboardState(nullptr);
 
+    //Cube c(Vector3(250, 250, -50), 100);
+
+    std::vector<Shape*> myShapes = parseDisplayCode(readFile("setup.ram"));
+	
+    //auto points = cube(Vector3(250, 250, -50), 100);
+
+    // calculating centroid
+    // Vector3 centroid;
+    // for (auto& p : points) {
+    //     centroid.x += p.x;
+    //     centroid.y += p.y;
+    //     centroid.z += p.z;
+    // }
+    // centroid /= points.size();
+
+    // main loop
     while (!(event.type == SDL_QUIT)) {
+        fw.clear();
+
+        // for (auto& p : points) {
+        //     p -= centroid;
+        //     rotate(p, 0.005, 0.005, 0.005);
+        //     p += centroid;
+        // }
+
+        // for (auto& p : points) {
+            
+        //     fw.drawPixel(p);
+        // }
+
+        //myShape.translate(Vector3(myShape.position.x + 0.005, myShape.position.y, myShape.position.z));
+
+        // if (event.type = SDL_PRESSED) {
+        //     if (event.key.keysym.sym == SDLK_w)
+        //         myShape.rotate(0.05, 0, 0);
+        //     if (event.key.keysym.sym == SDLK_s)
+        //         myShape.rotate(-0.05, 0, 0);
+        //     if (event.key.keysym.sym == SDLK_a)
+        //         myShape.rotate(0, 0.05, 0);
+        //     if (event.key.keysym.sym == SDLK_d)
+        //         myShape.rotate(0, -0.05, 0);
+        // }
+
+
+        //frames.push_front(fw.captureFrame());
+        for (const auto& shape : myShapes) {
+            //shape->setRotation(Vector3(45, 45, 45));
+            shape->rotate(Vector3(0, 1, 0));
+            shape->draw(fw);
+        }
+
+        fw.render(50, true);
+
         SDL_Delay(msPerFrame);          // setting a delay
 
         SDL_PollEvent(&event);          // catching event
@@ -449,3 +158,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
