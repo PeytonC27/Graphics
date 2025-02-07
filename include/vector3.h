@@ -4,7 +4,7 @@
 
 class Vector3 {
 public:
-    Vector3(float x, float y, float z = 0);
+    Vector3(float x, float y, float z);
 
     Vector3();
 

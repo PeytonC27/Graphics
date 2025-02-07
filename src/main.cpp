@@ -5,6 +5,8 @@
 #include "SDL2/SDL.h"
 #include "cube.h"
 #include "compound_shape.h"
+#include "triangle.h"
+#include "quad.h"
 
 #include <iostream>
 #include <cmath>
@@ -32,19 +34,22 @@ int main(int argc, char* argv[]) {
 
     //Cube c(Vector3(250, 250, -50), 100);
 
-    std::vector<Shape*> myShapes;
-    myShapes.push_back(new Cube(Vector3(250, 250, 0), Vector3(100, 10, 100)));
-    myShapes[0]->setColor(Color(122, 122, 255, 255));
+    Cube c = Cube(Vector3(250,250,0), Vector3(25,25,25));
+
+    // std::vector<Shape*> myShapes;
+    // myShapes.push_back(t);
 
     // main loop
     while (!(event.type == SDL_QUIT)) {
         fw.clear();
 
 
-        for (const auto& shape : myShapes) {
-            shape->rotate(Vector3(0.5, 0.5, 0.5));
-            shape->draw(fw);
-        }
+        // for (const auto& shape : myShapes) {
+        //     shape->draw(fw);
+        // }
+
+        for (const auto& q : c.getQuads())
+            fw.drawQuad(q, Color(122, 122, 122, 255));
 
         fw.render(100, true);
 

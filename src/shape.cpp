@@ -3,6 +3,9 @@
 
 #define PI 3.1415926535
 
+
+Shape::Shape() : position(Vector3(0,0,0)), scale(Vector3(1,1,1)) {}
+
 Shape::Shape(Vector3 position, Vector3 scale) : position(position), scale(scale) {
 
 }

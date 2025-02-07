@@ -1,20 +1,16 @@
 #pragma once
 
 #include "shape.h"
-#include "quad.h"
 
-class Cube : public Shape {
+class Quad : public Shape {
 public:
-    Cube();
-    Cube(Vector3 position, Vector3 scale = Vector3(1,1,1));
+    Vector3 v1, v2, v3, v4;
+
+    Quad(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4);
 
     void translate(Vector3 newPosition) override;
     void changeScale(Vector3 newScale) override;
     void updatePoints() override;
 
-    std::vector<Quad> getQuads();
-
 private:
-    
-    std::vector<Quad> quads;
 };

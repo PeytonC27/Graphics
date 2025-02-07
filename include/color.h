@@ -11,7 +11,7 @@ public:
 	Color(int red, int green, int blue);
 	Color(int red, int green, int blue, int alpha);
 	
-	void increaseBrightness();
+	void increaseBrightness(int amt);
 private:
 	
 };

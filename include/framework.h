@@ -3,6 +3,8 @@
 #include "SDL2/SDL.h"
 #include "vector3.h"
 #include "color.h"
+#include "triangle.h"
+#include "quad.h"
 
 #include <vector>
 #include <unordered_map>
@@ -30,6 +32,8 @@ public:
 
     void drawPixel(Vector3 coordinate, Color color);
     void drawLine(Vector3 start, Vector3 end, Color color);
+    void drawTriangle(Triangle triangle, Color color);
+    void drawQuad(Quad quad, Color color);
 	
     int saveImage();
     void clear();
@@ -42,4 +46,7 @@ private:
     std::unordered_map<std::pair<float, float>, PixelData, HashFunction> points;
 
     SDL_Window* window = NULL; 
+
+    void fillBottomFlatTriangle(Triangle triangle, Color color);
+    void fillTopFlatTriangle(Triangle triangle, Color color);
 };

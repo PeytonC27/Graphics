@@ -32,12 +32,3 @@ void CompoundShape::translate(Vector3 newPosition) {
         point->z -= diff.z;
     }
 }
-
-void CompoundShape::draw(Framework& fw) {
-    // drawing vertices
-    for (auto& p : points)
-        fw.drawPixel(*p, this->color);
-
-    for (auto& c : connections)
-        fw.drawLine(*c->point1, *c->point2, this->color);
-}

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "vector3.h"
-#include "framework.h"
 #include "color.h"
 
 #include <vector>
@@ -14,6 +13,7 @@ struct Connection {
 
 class Shape {
 public:
+    Shape();
     Shape(Vector3 position, Vector3 scale = Vector3(1,1,1));
 
     /// @brief Rotates the shape to a new rotation vector (in degrees)
@@ -28,10 +28,6 @@ public:
     /// @brief Sets the color of this object
     /// @param color 
     void setColor(Color color);
-
-    /// @brief Draws the shape
-    /// @param fw the framework to draw with
-    virtual void draw(Framework& fw) = 0;
 
     /// @brief Trenslates the shape to a new location
     /// @param newPosition the new position of the shape
